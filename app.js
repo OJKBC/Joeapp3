@@ -38,8 +38,8 @@ function say(text, cb){
   };
   const fallback = 600 + text.length * 260 / CONFIG.rate;
   if(!('speechSynthesis' in window)){ setTimeout(finish, fallback); return; }
+  stopVoice();
   try{
-    speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(text);
     u.lang = 'ja-JP'; u.rate = CONFIG.rate; u.pitch = CONFIG.pitch;
     const v = jaVoice || pickVoice();
@@ -53,9 +53,14 @@ function say(text, cb){
 
 /* ---- 効果音（Web Audio 合成） ---- */
 let actx = null;
+function ensureCtx(){
+  actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+  if(actx.state === 'suspended') actx.resume();
+  return actx;
+}
 function tone(freq, dur, type='sine', vol=0.2, when=0){
   try{
-    actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+    ensureCtx();
     const t = actx.currentTime + when;
     const o = actx.createOscillator(), g = actx.createGain();
     o.type = type; o.frequency.value = freq;
@@ -72,6 +77,46 @@ const sfx = {
   clear:() => [523,659,784,1047].forEach((f,k) => tone(f, 0.3, 'triangle', 0.25, k*0.13))
 };
 
+/* ---- 録音した声（voice/*.wav。rec.html で録る） ----
+   キー: q2_1=「にいちが」 a2=「に！」 f2_1=「にいちがに」。録っていないものは say() の声で代わりに読む。 */
+const voice = { buf:{}, src:null };
+async function loadVoices(){
+  try{
+    const names = await (await fetch('voice/manifest.json?t=' + Date.now())).json();
+    ensureCtx();
+    await Promise.all(names.map(async n => {
+      const ab = await (await fetch('voice/' + n + '.wav?t=' + Date.now())).arrayBuffer();
+      voice.buf[n] = await actx.decodeAudioData(ab);
+    }));
+  }catch(e){}
+}
+function stopVoice(){
+  if(voice.src){ try{ voice.src.onended = null; voice.src.stop(); }catch(e){} voice.src = null; }
+  if('speechSynthesis' in window) speechSynthesis.cancel();
+}
+function speakKey(key, text, cb){
+  const b = voice.buf[key];
+  if(!b) return say(text, cb);
+  stopVoice();
+  const tk = state.token;
+  let done = false;
+  const finish = () => {
+    if(done) return; done = true;
+    if(cb && tk === state.token) cb();
+  };
+  try{
+    ensureCtx();
+    const src = actx.createBufferSource();
+    src.buffer = b; src.connect(actx.destination);
+    src.onended = () => setTimeout(finish, 120);
+    src.start(); voice.src = src;
+  }catch(e){}
+  setTimeout(finish, b.duration * 1000 + 1500);
+}
+const qKey = () => 'q' + state.dan + '_' + (state.i + 1);
+const fKey = () => 'f' + state.dan + '_' + (state.i + 1);
+const aKey = () => 'a' + answer();
+
 /* ---- 画面 ---- */
 function show(id){
   document.querySelectorAll('.screen').forEach(s => s.classList.toggle('on', s.id === id));
@@ -80,7 +125,8 @@ const randHero = () => HEROES[Math.floor(Math.random() * HEROES.length)];
 
 function goHome(){
   state.token++;
-  if('speechSynthesis' in window) speechSynthesis.cancel();
+  stopVoice();
+  loadVoices();
   const p = loadProgress();
   [2,5].forEach(d => {
     const n = p.clears[d] || 0;
@@ -94,6 +140,7 @@ function goHome(){
 /* ---- プレイ ---- */
 function startDan(dan){
   state.token++;
+  ensureCtx();   // iPad はタップの中で音を有効にする必要がある
   Object.assign(state, { dan, i:0, input:'', miss:0, rowMiss:Array(9).fill(0), lock:false });
   $('hero').src = randHero();
   show('play');
@@ -113,7 +160,7 @@ function showQuestion(){
   $('reading').textContent = row().q;
   renderEq();
   clearHint();
-  say(row().q);
+  speakKey(qKey(), row().q);
 }
 
 function renderEq(){
@@ -144,7 +191,7 @@ function correct(){
   $('reading').innerHTML = row().q + '<span class="hl">' + row().a + '</span>';
   const h = $('hero'); h.classList.remove('jump'); void h.offsetWidth; h.classList.add('jump');
   // 「に！」→「にいちがに」→ 次の問題
-  say(row().a + '！', () => say(row().q + row().a, () => setTimeout(() => {
+  speakKey(aKey(), row().a + '！', () => speakKey(fKey(), row().q + row().a, () => setTimeout(() => {
     state.i++;
     if(state.i >= 9) finish(); else showQuestion();
   }, CONFIG.nextDelay)));
@@ -158,7 +205,7 @@ function wrong(){
   setTimeout(() => {
     state.input = ''; state.lock = false;
     renderEq(); updateHint();
-    say(row().q);
+    speakKey(qKey(), row().q);
   }, 500);
 }
 
@@ -206,7 +253,7 @@ document.querySelectorAll('.dan-btn').forEach(b => b.onclick = () => startDan(Nu
 $('homeBtn').onclick = goHome;
 $('backBtn').onclick = goHome;
 $('retryBtn').onclick = () => startDan(state.dan);
-$('againBtn').onclick = () => { if(!state.lock) say(row().q); };
+$('againBtn').onclick = () => { if(!state.lock) speakKey(qKey(), row().q); };
 document.addEventListener('keydown', e => {
   if(!$('play').classList.contains('on')) return;
   if(/^[0-9]$/.test(e.key)) press(e.key);

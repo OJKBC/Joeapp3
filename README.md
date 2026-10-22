@@ -8,3 +8,11 @@
 - 読み方の修正・段の追加は `config.js` の `DANS`
 - 起動：`python3 serve.py`（ポート8002）→ iPad は同じWi-Fiで `http://<MacのIP>:8002/index.html`
 - JS/CSS を変えたら index.html 末尾の `?v=N` を上げる
+
+## JOEの声の録音（rec.html）
+- **Macで** `python3 serve.py` を起動 → Mac のブラウザで `http://localhost:8002/rec.html`（iPad の Safari は http ではマイク不可）
+- 1問ごとに「もんだい(にいちが)」「こたえ(に！)」「とおして(にいちがに)」の3つ。2のだん27個＋5のだん27個（「じゅう」は共通なので実際は53個）
+- スペースキー＝録音開始/停止。止めると前後の無音カット・音量そろえ→保存→自動再生。だめならもう一度録れば上書き
+- 保存先 `voice/*.wav`＋`voice/manifest.json`。保存は Mac 自身からのみ受け付ける（serve.py）
+- アプリは録った声があればそれを、なければ読み上げ音声を鳴らす（ホームに戻るたびに読み直す）
+- `voice/` は子どもの声なので .gitignore で git に入れない（公開リポジトリに上げないこと）
