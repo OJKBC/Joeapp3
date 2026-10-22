@@ -15,4 +15,9 @@
 - スペースキー＝録音開始/停止。止めると前後の無音カット・音量そろえ→保存→自動再生。だめならもう一度録れば上書き
 - 保存先 `voice/*.wav`＋`voice/manifest.json`。保存は Mac 自身からのみ受け付ける（serve.py）
 - アプリは録った声があればそれを、なければ読み上げ音声を鳴らす（ホームに戻るたびに読み直す）
-- `voice/` は子どもの声なので .gitignore で git に入れない（公開リポジトリに上げないこと）
+- `voice/` も git に含めて公開している（2026-10-22 ユーザー判断で公開に同意）
+
+## 公開
+- https://ojkbc.github.io/Joeapp3/ （GitHub Pages・リポジトリ OJKBC/Joeapp3 は public）
+- 録音は Mac のローカル（rec.html）で → `git add -A && git commit && git push` で数十秒後に反映
+- 公開版の rec.html は保存できない（保存はローカルの serve.py のみ）
