@@ -7,7 +7,7 @@
 - 9問おわるとクリア画面（九九の表・まちがえた所に×）。クリア回数はホームの⭐
 - 読み方の修正・段の追加は `config.js` の `DANS`
 - 起動：`python3 serve.py`（ポート8002）→ iPad は同じWi-Fiで `http://<MacのIP>:8002/index.html`
-- JS/CSS を変えたら index.html 末尾の `?v=N` を上げる
+- config.js・app.js は毎回最新を読む（index.html 末尾で ?t=時刻）。index.html 自体(CSS含む)は公開版だと最大10分古いことがある
 
 ## JOEの声の録音（rec.html）
 - **Macで** `python3 serve.py` を起動 → Mac のブラウザで `http://localhost:8002/rec.html`（iPad の Safari は http ではマイク不可）

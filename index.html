@@ -151,7 +151,9 @@ button { font-family:inherit; cursor:pointer; border:none; color:inherit; }
   </div>
 </section>
 
-<script src="config.js?v=5"></script>
-<script src="app.js?v=4"></script>
+<!-- 公開版(GitHub Pages)は index.html が最大10分キャッシュされるので、JSは毎回最新を読む -->
+<script>
+['config.js', 'app.js'].forEach(f => document.write('<script src="' + f + '?t=' + Date.now() + '"><\/script>'));
+</script>
 </body>
 </html>
