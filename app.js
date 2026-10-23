@@ -3,7 +3,7 @@
    ========================================================= */
 
 const $ = id => document.getElementById(id);
-const state = { dan:2, i:0, input:'', miss:0, rowMiss:[], lock:false, token:0 };
+const state = { dan:2, i:0, input:'', miss:0, rowMiss:[], late:[], lock:false, token:0, timerIv:null };
 
 /* ---- 保存 ---- */
 function loadProgress(){
@@ -74,6 +74,8 @@ const sfx = {
   tap:  () => tone(880, 0.06, 'triangle', 0.15),
   ok:   () => { tone(784, 0.15, 'triangle', 0.25); tone(1175, 0.3, 'triangle', 0.25, 0.12); },
   ng:   () => tone(160, 0.3, 'sawtooth', 0.12),
+  tick: () => tone(1200, 0.05, 'square', 0.08),
+  late: () => { tone(440, 0.2, 'triangle', 0.2); tone(330, 0.35, 'triangle', 0.2, 0.18); },
   clear:() => [523,659,784,1047].forEach((f,k) => tone(f, 0.3, 'triangle', 0.25, k*0.13))
 };
 
@@ -125,9 +127,11 @@ const randHero = () => HEROES[Math.floor(Math.random() * HEROES.length)];
 
 function goHome(){
   state.token++;
+  stopTimer();
   stopVoice();
   loadVoices();
   const p = loadProgress();
+  renderTimerToggle(p);
   [2,5].forEach(d => {
     const n = p.clears[d] || 0;
     $('stars'+d).textContent = n === 0 ? '' : (n <= 5 ? '⭐'.repeat(n) : '⭐×' + n);
@@ -141,7 +145,7 @@ function goHome(){
 function startDan(dan){
   state.token++;
   ensureCtx();   // iPad はタップの中で音を有効にする必要がある
-  Object.assign(state, { dan, i:0, input:'', miss:0, rowMiss:Array(9).fill(0), lock:false });
+  Object.assign(state, { dan, i:0, input:'', miss:0, rowMiss:Array(9).fill(0), late:Array(9).fill(false), lock:false });
   $('hero').src = randHero();
   show('play');
   showQuestion();
@@ -152,15 +156,16 @@ const answer = () => String(state.dan * (state.i + 1));
 
 function showQuestion(){
   state.input = ''; state.miss = 0; state.lock = false;
+  stopTimer(); resetTimerUI();
   $('card').classList.remove('ok');
-  $('praise').textContent = '';
+  $('praise').textContent = ''; $('praise').classList.remove('late');
   $('keypad').classList.remove('lock');
   $('dots').innerHTML = DANS[state.dan].rows.map((_, k) =>
     '<span class="dot ' + (k < state.i ? 'done' : k === state.i ? 'now' : '') + '"></span>').join('');
   $('reading').textContent = row().q;
   renderEq();
   clearHint();
-  speakKey(qKey(), row().q);
+  speakKey(qKey(), row().q, startTimer);   // 言いおわってからタイマー開始
 }
 
 function renderEq(){
@@ -183,18 +188,67 @@ function press(key){
 
 function correct(){
   state.lock = true;
+  stopTimer();
   $('keypad').classList.add('lock');
   clearHint();
   sfx.ok();
   $('card').classList.add('ok');
   $('praise').textContent = PRAISE[Math.floor(Math.random() * PRAISE.length)];
-  $('reading').innerHTML = row().q + '<span class="hl">' + row().a + '</span>';
   const h = $('hero'); h.classList.remove('jump'); void h.offsetWidth; h.classList.add('jump');
-  // 「に！」→「にいちがに」→ 次の問題
+  sayAnswerThenNext();
+}
+
+/* 「に！」→「にいちがに」→ 次の問題 */
+function sayAnswerThenNext(){
+  $('reading').innerHTML = row().q + '<span class="hl">' + row().a + '</span>';
   speakKey(aKey(), row().a + '！', () => speakKey(fKey(), row().q + row().a, () => setTimeout(() => {
     state.i++;
     if(state.i >= 9) finish(); else showQuestion();
   }, CONFIG.nextDelay)));
+}
+
+/* ---- タイマー ---- */
+function timerOn(){ return loadProgress().timer !== false; }
+function renderTimerToggle(p){
+  const on = p.timer !== false;
+  $('timerToggle').textContent = '⏱ ' + CONFIG.timeLimit + 'びょう タイマー：' + (on ? 'ON' : 'OFF');
+  $('timerToggle').classList.toggle('on', on);
+}
+function resetTimerUI(){
+  $('timer').classList.toggle('off', !timerOn());
+  const b = $('tbar'); b.className = ''; b.style.width = '100%';
+  $('tnum').textContent = CONFIG.timeLimit;
+}
+function startTimer(){
+  if(!timerOn() || state.lock) return;
+  stopTimer();
+  const end = Date.now() + CONFIG.timeLimit * 1000;
+  let lastSec = CONFIG.timeLimit;
+  state.timerIv = setInterval(() => {
+    const ms = Math.max(0, end - Date.now()), sec = Math.ceil(ms / 1000);
+    const b = $('tbar');
+    b.style.width = (ms / (CONFIG.timeLimit * 1000) * 100) + '%';
+    b.className = sec <= CONFIG.tickFrom ? 'hurry' : sec <= CONFIG.timeLimit / 2 ? 'warn' : '';
+    $('tnum').textContent = sec;
+    if(sec < lastSec){ lastSec = sec; if(sec > 0 && sec <= CONFIG.tickFrom) sfx.tick(); }
+    if(ms <= 0) timeUp();
+  }, 100);
+}
+function stopTimer(){
+  if(state.timerIv){ clearInterval(state.timerIv); state.timerIv = null; }
+}
+/* 時間ぎれ：罰にせず、こたえを見せて聞かせてから次へ */
+function timeUp(){
+  stopTimer();
+  state.lock = true;
+  state.late[state.i] = true;
+  $('keypad').classList.add('lock');
+  clearHint();
+  sfx.late();
+  state.input = answer(); renderEq();
+  $('praise').textContent = 'じかん ぎれ！ こたえは ' + answer();
+  $('praise').classList.add('late');
+  setTimeout(sayAnswerThenNext, 700);
 }
 
 function wrong(){
@@ -202,7 +256,9 @@ function wrong(){
   state.miss++; state.rowMiss[state.i]++;
   sfx.ng();
   const c = $('card'); c.classList.remove('shake'); void c.offsetWidth; c.classList.add('shake');
+  const i = state.i;
   setTimeout(() => {
+    if(state.i !== i || state.late[i] || !$('play').classList.contains('on')) return;   // そのあいだに時間ぎれ・画面移動
     state.input = ''; state.lock = false;
     renderEq(); updateHint();
     speakKey(qKey(), row().q);
@@ -232,6 +288,7 @@ function finish(){
     '<div>' + state.dan + ' × ' + (k + 1) + ' = ' + state.dan * (k + 1) + '</div>' +
     '<div class="r">' + r.q + r.a +
     (state.rowMiss[k] ? ' <span class="m">' + '×'.repeat(Math.min(state.rowMiss[k], 3)) + '</span>' : '') +
+    (state.late[k] ? ' <span class="m">⏰</span>' : '') +
     '</div>').join('');
   show('clear');
   sfx.clear();
@@ -251,6 +308,9 @@ function buildKeypad(){
 
 document.querySelectorAll('.dan-btn').forEach(b => b.onclick = () => startDan(Number(b.dataset.dan)));
 $('homeBtn').onclick = goHome;
+$('timerToggle').onclick = () => {
+  const p = loadProgress(); p.timer = (p.timer === false); saveProgress(p); renderTimerToggle(p);
+};
 $('backBtn').onclick = goHome;
 $('retryBtn').onclick = () => startDan(state.dan);
 $('againBtn').onclick = () => { if(!state.lock) speakKey(qKey(), row().q); };

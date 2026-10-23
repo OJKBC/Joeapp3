@@ -66,6 +66,16 @@ button { font-family:inherit; cursor:pointer; border:none; color:inherit; }
 #reading { font-size:clamp(28px,5vw,44px); margin-top:6px; min-height:1.3em; color:#ffe9b0; }
 #reading .hl { color:#ffd23f; }
 #praise { font-size:34px; height:44px; color:#7dff9a; font-weight:bold; }
+#praise.late { color:#ffa94d; }
+.timer { display:flex; align-items:center; gap:10px; margin-top:4px; }
+.timer.off { visibility:hidden; }
+.tbar { flex:1; height:16px; border-radius:8px; background:rgba(255,255,255,.15); overflow:hidden; }
+.tbar div { height:100%; width:100%; background:#7dff9a; border-radius:8px; transition:width .25s linear, background .3s; }
+.tbar div.warn { background:#ffd23f; }
+.tbar div.hurry { background:#ff6b6b; }
+#tnum { font-size:26px; font-weight:bold; min-width:2.6em; text-align:right; }
+.timer-toggle { font-size:22px; padding:10px 22px; border-radius:18px; background:rgba(20,8,60,.7); border:3px solid #9d86e8; }
+.timer-toggle.on { border-color:#7dff9a; }
 .card.shake { animation:shake .4s; }
 @keyframes shake { 20%{transform:translateX(-14px)} 40%{transform:translateX(14px)} 60%{transform:translateX(-8px)} 80%{transform:translateX(8px)} }
 .card.ok { border-color:#7dff9a; box-shadow:0 0 40px rgba(125,255,154,.8); }
@@ -105,6 +115,7 @@ button { font-family:inherit; cursor:pointer; border:none; color:inherit; }
     <button class="dan-btn" data-dan="2"><span class="big glow">2</span><span class="lbl">のだん</span><span class="stars" id="stars2"></span></button>
     <button class="dan-btn" data-dan="5"><span class="big glow">5</span><span class="lbl">のだん</span><span class="stars" id="stars5"></span></button>
   </div>
+  <button class="timer-toggle" id="timerToggle"></button>
   <div class="hero-pair"><img id="homeHeroL" alt=""><img id="homeHeroR" alt=""></div>
 </section>
 
@@ -122,6 +133,7 @@ button { font-family:inherit; cursor:pointer; border:none; color:inherit; }
       <div id="eq"></div>
       <div id="reading"></div>
       <div id="praise"></div>
+      <div class="timer" id="timer"><div class="tbar"><div id="tbar"></div></div><span id="tnum"></span></div>
     </div>
   </div>
   <div class="keypad" id="keypad"></div>
@@ -139,7 +151,7 @@ button { font-family:inherit; cursor:pointer; border:none; color:inherit; }
   </div>
 </section>
 
-<script src="config.js?v=3"></script>
-<script src="app.js?v=3"></script>
+<script src="config.js?v=4"></script>
+<script src="app.js?v=4"></script>
 </body>
 </html>
