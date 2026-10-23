@@ -19,9 +19,9 @@ button { font-family:inherit; cursor:pointer; border:none; color:inherit; }
 .glow { text-shadow:0 0 12px #ffcf4a, 0 3px 0 #6a3a00; }
 
 /* ---- ホーム ---- */
-#home { justify-content:center; gap:28px; }
-#home h1 { font-size:clamp(44px,9vw,84px); margin:0; color:#ffe27a; letter-spacing:.06em; }
-#home .sub { font-size:22px; opacity:.9; margin-top:-16px; }
+#home { justify-content:center; gap:min(22px,2.6vh); }
+#home h1 { font-size:clamp(40px,min(9vw,9vh),84px); margin:0; color:#ffe27a; letter-spacing:.06em; }
+#home .sub { font-size:22px; opacity:.9; margin-top:-10px; }
 .dan-row { display:flex; gap:28px; flex-wrap:wrap; justify-content:center; }
 .dan-btn {
   width:240px; padding:22px 10px 16px; border-radius:28px;
@@ -30,11 +30,19 @@ button { font-family:inherit; cursor:pointer; border:none; color:inherit; }
   display:flex; flex-direction:column; align-items:center; gap:6px;
 }
 .dan-btn:active { transform:translateY(5px); box-shadow:0 0 24px rgba(255,210,90,.6), 0 3px 0 #22105e; }
-.dan-btn .big { font-size:96px; font-weight:bold; line-height:1; color:#ffe27a; }
+.dan-btn .big { font-size:clamp(60px,10vh,96px); font-weight:bold; line-height:1; color:#ffe27a; }
 .dan-btn .lbl { font-size:30px; font-weight:bold; }
-.dan-btn .stars { font-size:20px; min-height:26px; }
+.dan-btn .stars { font-size:20px; height:26px; line-height:26px; }
+.dan-col { display:flex; flex-direction:column; align-items:center; gap:min(14px,1.6vh); }
+.hard-btn {
+  width:240px; padding:10px; border-radius:20px; font-size:24px; font-weight:bold;
+  background:linear-gradient(180deg,#ff7a3d,#b3261e); border:3px solid #ffd76a;
+  box-shadow:0 0 18px rgba(255,120,60,.6), 0 6px 0 #5e140e;
+}
+.hard-btn:active { transform:translateY(4px); box-shadow:0 0 18px rgba(255,120,60,.6), 0 2px 0 #5e140e; }
+.hard-btn .stars { display:block; font-size:16px; height:20px; line-height:20px; }
 #home .hero-pair { display:flex; gap:40px; }
-#home .hero-pair img { width:150px; filter:drop-shadow(0 0 14px rgba(255,220,120,.7)); }
+#home .hero-pair img { width:min(150px,16vh); filter:drop-shadow(0 0 14px rgba(255,220,120,.7)); }
 
 /* ---- プレイ ---- */
 #play { justify-content:space-between; }
@@ -74,8 +82,9 @@ button { font-family:inherit; cursor:pointer; border:none; color:inherit; }
 .tbar div.warn { background:#ffd23f; }
 .tbar div.hurry { background:#ff6b6b; }
 #tnum { font-size:26px; font-weight:bold; min-width:2.6em; text-align:right; }
-.timer-toggle { font-size:22px; padding:10px 22px; border-radius:18px; background:rgba(20,8,60,.7); border:3px solid #9d86e8; }
-.timer-toggle.on { border-color:#7dff9a; }
+.timer-pick { display:flex; align-items:center; gap:10px; font-size:22px; }
+.timer-pick button { font-size:22px; padding:8px 16px; border-radius:16px; background:rgba(20,8,60,.7); border:3px solid #9d86e8; }
+.timer-pick button.on { background:#2a7a45; border-color:#7dff9a; box-shadow:0 0 14px rgba(125,255,154,.6); }
 .card.shake { animation:shake .4s; }
 @keyframes shake { 20%{transform:translateX(-14px)} 40%{transform:translateX(14px)} 60%{transform:translateX(-8px)} 80%{transform:translateX(8px)} }
 .card.ok { border-color:#7dff9a; box-shadow:0 0 40px rgba(125,255,154,.8); }
@@ -112,10 +121,16 @@ button { font-family:inherit; cursor:pointer; border:none; color:inherit; }
   <h1 class="glow">くく ヒーロー</h1>
   <div class="sub">どの だんに する？</div>
   <div class="dan-row">
-    <button class="dan-btn" data-dan="2"><span class="big glow">2</span><span class="lbl">のだん</span><span class="stars" id="stars2"></span></button>
-    <button class="dan-btn" data-dan="5"><span class="big glow">5</span><span class="lbl">のだん</span><span class="stars" id="stars5"></span></button>
+    <div class="dan-col">
+      <button class="dan-btn" data-dan="2"><span class="big glow">2</span><span class="lbl">のだん</span><span class="stars" id="stars2"></span></button>
+      <button class="hard-btn" data-dan="2">🔥 ばらばら<span class="stars" id="stars2r"></span></button>
+    </div>
+    <div class="dan-col">
+      <button class="dan-btn" data-dan="5"><span class="big glow">5</span><span class="lbl">のだん</span><span class="stars" id="stars5"></span></button>
+      <button class="hard-btn" data-dan="5">🔥 ばらばら<span class="stars" id="stars5r"></span></button>
+    </div>
   </div>
-  <button class="timer-toggle" id="timerToggle"></button>
+  <div class="timer-pick" id="timerPick"></div>
   <div class="hero-pair"><img id="homeHeroL" alt=""><img id="homeHeroR" alt=""></div>
 </section>
 

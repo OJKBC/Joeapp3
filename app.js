@@ -3,7 +3,7 @@
    ========================================================= */
 
 const $ = id => document.getElementById(id);
-const state = { dan:2, i:0, input:'', miss:0, rowMiss:[], late:[], lock:false, token:0, timerIv:null };
+const state = { dan:2, random:false, order:[], i:0, input:'', miss:0, rowMiss:[], late:[], lock:false, token:0, timerIv:null };
 
 /* ---- 保存 ---- */
 function loadProgress(){
@@ -115,8 +115,8 @@ function speakKey(key, text, cb){
   }catch(e){}
   setTimeout(finish, b.duration * 1000 + 1500);
 }
-const qKey = () => 'q' + state.dan + '_' + (state.i + 1);
-const fKey = () => 'f' + state.dan + '_' + (state.i + 1);
+const qKey = () => 'q' + state.dan + '_' + num();
+const fKey = () => 'f' + state.dan + '_' + num();
 const aKey = () => 'a' + answer();
 
 /* ---- 画面 ---- */
@@ -132,27 +132,36 @@ function goHome(){
   loadVoices();
   const p = loadProgress();
   renderTimerToggle(p);
-  [2,5].forEach(d => {
-    const n = p.clears[d] || 0;
-    $('stars'+d).textContent = n === 0 ? '' : (n <= 5 ? '⭐'.repeat(n) : '⭐×' + n);
-  });
+  [2,5].forEach(d => [d, d+'r'].forEach(k => {
+    const n = p.clears[k] || 0;
+    $('stars'+k).textContent = n === 0 ? '' : (n <= 5 ? '⭐'.repeat(n) : '⭐×' + n);
+  }));
   $('homeHeroL').src = randHero();
   $('homeHeroR').src = randHero();
   show('home');
 }
 
 /* ---- プレイ ---- */
-function startDan(dan){
+/* random=true は「ばらばら（むずかしい）」：1〜9を毎回ちがう順番で出す */
+function shuffle(a){
+  for(let k = a.length - 1; k > 0; k--){ const j = Math.floor(Math.random() * (k + 1)); [a[k], a[j]] = [a[j], a[k]]; }
+  return a;
+}
+function startDan(dan, random=false){
   state.token++;
   ensureCtx();   // iPad はタップの中で音を有効にする必要がある
-  Object.assign(state, { dan, i:0, input:'', miss:0, rowMiss:Array(9).fill(0), late:Array(9).fill(false), lock:false });
+  const order = [0,1,2,3,4,5,6,7,8];
+  if(random) shuffle(order);
+  Object.assign(state, { dan, random, order, i:0, input:'', miss:0, rowMiss:Array(9).fill(0), late:Array(9).fill(false), lock:false });
   $('hero').src = randHero();
   show('play');
   showQuestion();
 }
 
-const row = () => DANS[state.dan].rows[state.i];
-const answer = () => String(state.dan * (state.i + 1));
+const cur = () => state.order[state.i];          // いまの問題が何番目の行か(0〜8)
+const num = () => cur() + 1;                        // かける数(1〜9)
+const row = () => DANS[state.dan].rows[cur()];
+const answer = () => String(state.dan * num());
 
 function showQuestion(){
   state.input = ''; state.miss = 0; state.lock = false;
@@ -170,7 +179,7 @@ function showQuestion(){
 
 function renderEq(){
   const a = state.input;
-  $('eq').innerHTML = state.dan + ' × ' + (state.i + 1) + ' = ' +
+  $('eq').innerHTML = state.dan + ' × ' + num() + ' = ' +
     '<span id="ans" class="' + (a ? '' : 'empty') + '">' + (a || '?') + '</span>';
 }
 
@@ -208,27 +217,33 @@ function sayAnswerThenNext(){
 }
 
 /* ---- タイマー ---- */
-function timerOn(){ return loadProgress().timer !== false; }
+/* progress.timerSec: 0=なし / 3 / 5 / 10。むかしの ON/OFF(progress.timer=false) は「なし」とみなす */
+function timerSec(p=loadProgress()){
+  if(typeof p.timerSec === 'number') return p.timerSec;
+  return p.timer === false ? 0 : CONFIG.timerDefault;
+}
+function timerOn(){ return timerSec() > 0; }
 function renderTimerToggle(p){
-  const on = p.timer !== false;
-  $('timerToggle').textContent = '⏱ ' + CONFIG.timeLimit + 'びょう タイマー：' + (on ? 'ON' : 'OFF');
-  $('timerToggle').classList.toggle('on', on);
+  const now = timerSec(p);
+  $('timerPick').innerHTML = '⏱ ' + [0, ...CONFIG.timerChoices].map(s =>
+    '<button data-s="' + s + '" class="' + (s === now ? 'on' : '') + '">' + (s ? s + 'びょう' : 'なし') + '</button>').join('');
 }
 function resetTimerUI(){
   $('timer').classList.toggle('off', !timerOn());
   const b = $('tbar'); b.className = ''; b.style.width = '100%';
-  $('tnum').textContent = CONFIG.timeLimit;
+  $('tnum').textContent = timerSec();
 }
 function startTimer(){
   if(!timerOn() || state.lock) return;
   stopTimer();
-  const end = Date.now() + CONFIG.timeLimit * 1000;
-  let lastSec = CONFIG.timeLimit;
+  const limit = timerSec();
+  const end = Date.now() + limit * 1000;
+  let lastSec = limit;
   state.timerIv = setInterval(() => {
     const ms = Math.max(0, end - Date.now()), sec = Math.ceil(ms / 1000);
     const b = $('tbar');
-    b.style.width = (ms / (CONFIG.timeLimit * 1000) * 100) + '%';
-    b.className = sec <= CONFIG.tickFrom ? 'hurry' : sec <= CONFIG.timeLimit / 2 ? 'warn' : '';
+    b.style.width = (ms / (limit * 1000) * 100) + '%';
+    b.className = sec <= CONFIG.tickFrom ? 'hurry' : sec <= limit / 2 ? 'warn' : '';
     $('tnum').textContent = sec;
     if(sec < lastSec){ lastSec = sec; if(sec > 0 && sec <= CONFIG.tickFrom) sfx.tick(); }
     if(ms <= 0) timeUp();
@@ -241,7 +256,7 @@ function stopTimer(){
 function timeUp(){
   stopTimer();
   state.lock = true;
-  state.late[state.i] = true;
+  state.late[cur()] = true;
   $('keypad').classList.add('lock');
   clearHint();
   sfx.late();
@@ -253,12 +268,12 @@ function timeUp(){
 
 function wrong(){
   state.lock = true;
-  state.miss++; state.rowMiss[state.i]++;
+  state.miss++; state.rowMiss[cur()]++;
   sfx.ng();
   const c = $('card'); c.classList.remove('shake'); void c.offsetWidth; c.classList.add('shake');
   const i = state.i;
   setTimeout(() => {
-    if(state.i !== i || state.late[i] || !$('play').classList.contains('on')) return;   // そのあいだに時間ぎれ・画面移動
+    if(state.i !== i || state.late[cur()] || !$('play').classList.contains('on')) return;   // そのあいだに時間ぎれ・画面移動
     state.input = ''; state.lock = false;
     renderEq(); updateHint();
     speakKey(qKey(), row().q);
@@ -280,9 +295,10 @@ function clearHint(){
 /* ---- クリア ---- */
 function finish(){
   const p = loadProgress();
-  p.clears[state.dan] = (p.clears[state.dan] || 0) + 1;
+  const ck = state.dan + (state.random ? 'r' : '');
+  p.clears[ck] = (p.clears[ck] || 0) + 1;
   saveProgress(p);
-  $('clearTitle').textContent = DANS[state.dan].name + ' クリア！';
+  $('clearTitle').textContent = DANS[state.dan].name + (state.random ? ' ばらばら' : '') + ' クリア！';
   $('clearHero').src = $('hero').src;
   $('clearTable').innerHTML = DANS[state.dan].rows.map((r, k) =>
     '<div>' + state.dan + ' × ' + (k + 1) + ' = ' + state.dan * (k + 1) + '</div>' +
@@ -307,12 +323,14 @@ function buildKeypad(){
 }
 
 document.querySelectorAll('.dan-btn').forEach(b => b.onclick = () => startDan(Number(b.dataset.dan)));
+document.querySelectorAll('.hard-btn').forEach(b => b.onclick = () => startDan(Number(b.dataset.dan), true));
 $('homeBtn').onclick = goHome;
-$('timerToggle').onclick = () => {
-  const p = loadProgress(); p.timer = (p.timer === false); saveProgress(p); renderTimerToggle(p);
+$('timerPick').onclick = e => {
+  const b = e.target.closest('button'); if(!b) return;
+  const p = loadProgress(); p.timerSec = Number(b.dataset.s); delete p.timer; saveProgress(p); renderTimerToggle(p);
 };
 $('backBtn').onclick = goHome;
-$('retryBtn').onclick = () => startDan(state.dan);
+$('retryBtn').onclick = () => startDan(state.dan, state.random);
 $('againBtn').onclick = () => { if(!state.lock) speakKey(qKey(), row().q); };
 document.addEventListener('keydown', e => {
   if(!$('play').classList.contains('on')) return;

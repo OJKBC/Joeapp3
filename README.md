@@ -21,3 +21,7 @@
 - https://ojkbc.github.io/Joeapp3/ （GitHub Pages・リポジトリ OJKBC/Joeapp3 は public）
 - 録音は Mac のローカル（rec.html）で → `git add -A && git commit && git push` で数十秒後に反映
 - 公開版の rec.html は保存できない（保存はローカルの serve.py のみ）
+
+## モード・タイマー
+- 各段に「🔥 ばらばら」＝1〜9をランダム順で出す（クリア記録は clears['2r'] など別管理）
+- タイマーはホームで なし/3/5/10 秒を選ぶ（progress.timerSec、既定10。config.js の timerChoices）
